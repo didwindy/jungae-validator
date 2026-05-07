@@ -4,11 +4,20 @@ VWorld API 래퍼 v2
 - 단건 좌표변환: /req/address (선택 후 코드 추출용)
 """
 import re
+import time
 import requests
-from config import VWORLD_KEY
+from config import VWORLD_KEY, VWORLD_DOMAIN
 
 VWORLD_SEARCH   = "https://api.vworld.kr/req/search"
 VWORLD_GEOCODER = "https://api.vworld.kr/req/address"
+
+
+def _vworld_headers() -> dict:
+    """VWorld 도메인 인증용 Referer 헤더 — 등록된 서비스 URL과 일치해야 함."""
+    domain = VWORLD_DOMAIN.rstrip("/")
+    if not domain.startswith("http"):
+        domain = f"http://{domain}"
+    return {"Referer": domain + "/"}
 
 
 def search_candidates(query: str, size: int = 10) -> dict:
@@ -31,7 +40,14 @@ def search_candidates(query: str, size: int = 10) -> dict:
         "errorformat": "json",
     }
     try:
-        resp = requests.get(VWORLD_SEARCH, params=params, timeout=8)
+        headers = _vworld_headers()
+        resp = None
+        for attempt in range(3):
+            resp = requests.get(VWORLD_SEARCH, params=params, headers=headers, timeout=8)
+            if resp.status_code != 502:
+                break
+            if attempt < 2:
+                time.sleep(1)
         resp.raise_for_status()
         data = resp.json()
 
@@ -91,7 +107,14 @@ def geocode_single(full_address: str) -> dict:
         "crs":         "EPSG:4326",
     }
     try:
-        resp = requests.get(VWORLD_GEOCODER, params=params, timeout=8)
+        headers = _vworld_headers()
+        resp = None
+        for attempt in range(3):
+            resp = requests.get(VWORLD_GEOCODER, params=params, headers=headers, timeout=8)
+            if resp.status_code != 502:
+                break
+            if attempt < 2:
+                time.sleep(1)
         resp.raise_for_status()
         data = resp.json()
 

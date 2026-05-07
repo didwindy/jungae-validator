@@ -27,6 +27,12 @@ def index():
 
 
 # ─── 탭1: 주소 후보 목록 ────────────────────────────────────────────────
+
+# ─── 헬스체크 (UptimeRobot 슬립 방지용) ─────────────────────────────────
+@app.route("/health", methods=["GET"])
+def health_check():
+    return jsonify({"status": "ok"}), 200
+
 @app.route("/api/search-candidates", methods=["POST"])
 def search_candidates_api():
     """
