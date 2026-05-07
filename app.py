@@ -1,11 +1,13 @@
 """
-중개대상물 광고 검증 시스템 - Flask 백엔드 v2
+중개대상물 광고 검증 시스템 - Flask 백엔드
 """
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 from validators.engine import validate
-from api.kakao import search_candidates as kakao_search_candidates
-from api.vworld import geocode_single_with_fallback
+from api.vworld import (
+    search_candidates_with_fallback,
+    geocode_single_with_fallback,
+)
 from api.building_hub import (
     get_title_info_safe as get_title_info,
     get_recap_title_info_safe as get_recap_title_info,
@@ -24,26 +26,25 @@ def index():
     return render_template("index.html")
 
 
+# ─── 헬스체크 (UptimeRobot 슬립 방지용) ─────────────────────────────────
+@app.route("/health", methods=["GET"])
+def health_check():
+    return jsonify({"status": "ok"}), 200
+
+
 # ─── 탭1: 주소 후보 목록 ────────────────────────────────────────────────
 @app.route("/api/search-candidates", methods=["POST"])
 def search_candidates_api():
-    """
-    키워드 입력 → 후보 주소 목록 반환 (드롭다운용)
-    """
     data  = request.get_json()
     query = data.get("query", "").strip()
     if not query:
         return jsonify({"error": "검색어를 입력해주세요."}), 400
-    result = kakao_search_candidates(query)
+    result = search_candidates_with_fallback(query)
     return jsonify(result)
 
 
 @app.route("/api/geocode-single", methods=["POST"])
 def geocode_single_api():
-    """
-    선택한 전체 주소 → 시군구코드/법정동코드 추출
-    (후보 목록에서 코드가 없을 때 호출)
-    """
     data    = request.get_json()
     address = data.get("address", "").strip()
     if not address:
@@ -62,15 +63,9 @@ def land_info_api():
             data.get("platGbCd", "0"),
             data["bun"], data["ji"]
         )
-        result = get_land_info(pnu)
-        # 해외 서버에서 VWorld 차단 시 수동입력 안내
-        if "error" in result:
-            result["manualInputRequired"] = True
-            result["manualInputHint"] = "토지대장 자동조회 불가 — 아래에 직접 입력하세요."
-        return jsonify(result)
+        return jsonify(get_land_info(pnu))
     except KeyError as e:
-        return jsonify({"error": f"필수 파라미터 누락: {e}",
-                        "manualInputRequired": True}), 400
+        return jsonify({"error": f"필수 파라미터 누락: {e}"}), 400
 
 
 @app.route("/api/building-title", methods=["POST"])
@@ -83,7 +78,6 @@ def building_title_api():
     recap = get_recap_title_info(sg, bd, bun, ji)
 
     has_recap    = "error" not in recap
-    # recap 우선, 0/None이면 title 폴백 (아파트에서 recap.grndFlrCnt=0 케이스 대응)
     parking      = recap.get("parking")     or title.get("parking", 0)
     total_floors = recap.get("grndFlrCnt")  or title.get("grndFlrCnt", 0)
     under_floors = recap.get("ugrndFlrCnt") or title.get("ugrndFlrCnt", 0)
@@ -113,10 +107,8 @@ def building_dong_ho_api():
     return jsonify(result)
 
 
-
 @app.route("/api/dong-floors", methods=["POST"])
 def dong_floors_api():
-    """동 선택 후 해당 동의 지상 총층수 조회"""
     data = request.get_json()
     result = get_dong_title_info(
         data.get("sigunguCd",""), data.get("bjdongCd",""),
@@ -124,6 +116,7 @@ def dong_floors_api():
         data.get("dongNm","")
     )
     return jsonify(result)
+
 
 @app.route("/api/exclusive-area", methods=["POST"])
 def exclusive_area_api():
@@ -148,30 +141,19 @@ def validate_api():
     return jsonify(result)
 
 
-
-# ─── API 키 상태 확인 ────────────────────────────────────────────────────────
+# ─── API 키 상태 확인 ────────────────────────────────────────────────────
 @app.route("/api/test-keys", methods=["GET"])
 def test_keys_api():
-    from api.building_hub import test_api_key, _is_dummy_mode as hub_dummy
-    from api.land_ledger import _is_dummy_mode as land_dummy
-    from api.vworld import _is_dummy_mode as vworld_dummy
+    from api.building_hub import _is_dummy_mode as hub_dummy
+    from api.land_ledger  import _is_dummy_mode as land_dummy
+    from api.vworld       import _is_dummy_mode as vworld_dummy
 
     return jsonify({
-        "buildingHub": {
-            "keySet": not hub_dummy(),
-            "status": test_api_key() if not hub_dummy() else {"valid": False, "message": "API 키 미설정"}
-        },
-        "vworld": {
-            "keySet": not vworld_dummy(),
-            "status": {"valid": not vworld_dummy(), "message": "키 설정됨" if not vworld_dummy() else "API 키 미설정"}
-        },
+        "buildingHub": {"keySet": not hub_dummy()},
+        "vworld":      {"keySet": not vworld_dummy()},
+        "land":        {"keySet": not land_dummy()},
     })
 
-
-# ─── 헬스체크 (Render 슬립 방지 모니터링용) ──────────────────────────────
-@app.route("/health", methods=["GET"])
-def health_check():
-    return jsonify({"status": "ok"}), 200
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
