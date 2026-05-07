@@ -729,82 +729,9 @@ select { cursor: pointer; }
   min-width: 60px;
   display: inline-block;
 }
-
-/* ── 토지대장 수동입력 박스 ──────────────────────────────────────── */
-.manual-land-box {
-  background: var(--amber-bg);
-  border: 1px solid #fde68a;
-  border-radius: var(--radius-sm);
-  padding: 12px 14px;
-  margin-top: 10px;
-}
-
-/* ── 운영시간 배너 ───────────────────────────────────────────────── */
-.hours-banner {
-  background: #eff6ff;
-  border-bottom: 1px solid #bfdbfe;
-  color: #1e40af;
-  font-size: .75rem;
-  padding: 6px 24px;
-  text-align: center;
-}
-
-/* ── Cold Start 로딩 오버레이 ────────────────────────────────────── */
-#cold-start-overlay {
-  position: fixed; inset: 0; z-index: 9999;
-  background: linear-gradient(135deg, #1a2a4a 0%, #243555 100%);
-  display: flex; align-items: center; justify-content: center;
-}
-.cold-start-box {
-  text-align: center; color: #fff; padding: 40px;
-}
-.cold-spinner {
-  width: 56px; height: 56px;
-  border: 4px solid rgba(255,255,255,.15);
-  border-top-color: #60a5fa;
-  border-radius: 50%;
-  animation: spin 0.9s linear infinite;
-  margin: 0 auto 24px;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-.cold-title {
-  font-size: 1.3rem; font-weight: 700;
-  color: #fff; margin-bottom: 8px;
-  font-family: 'Noto Sans KR', sans-serif;
-}
-.cold-sub {
-  font-size: .9rem; color: #93c5fd; margin-bottom: 20px;
-}
-.cold-bar-wrap {
-  width: 240px; height: 4px;
-  background: rgba(255,255,255,.15);
-  border-radius: 20px; margin: 0 auto 16px; overflow: hidden;
-}
-.cold-bar {
-  height: 100%; width: 0%;
-  background: linear-gradient(90deg, #3b82f6, #60a5fa);
-  border-radius: 20px;
-  transition: width 0.5s ease;
-}
-.cold-notice {
-  font-size: .72rem; color: rgba(255,255,255,.4);
-}
 </style>
 </head>
 <body>
-<!-- ═══ Cold Start 로딩 화면 ════════════════════════════════════════ -->
-<div id="cold-start-overlay">
-  <div class="cold-start-box">
-    <div class="cold-spinner"></div>
-    <div class="cold-title">서버 준비 중입니다</div>
-    <div class="cold-sub">잠시 후 자동으로 연결됩니다 <span id="cold-dots">.</span></div>
-    <div class="cold-bar-wrap">
-      <div class="cold-bar" id="cold-bar"></div>
-    </div>
-    <div class="cold-notice">첫 접속 시 최대 30초 소요될 수 있습니다</div>
-  </div>
-</div>
-
 
 <!-- ═══ 헤더 ═══════════════════════════════════════════════════════ -->
 <header class="app-header">
@@ -821,11 +748,6 @@ select { cursor: pointer; }
   본 검증 결과를 활용한 광고로 인해 발생하는 중개사고, 과태료 부과, 법적 분쟁 등 일체의 손해에 대해
   본 시스템 개발자는 민·형사상 어떠한 법적 책임도 지지 않습니다.
   최종 광고 적법성 판단은 이용자 본인의 책임입니다.
-</div>
-<!-- ═══ 운영시간 안내 ════════════════════════════════════════════ -->
-<div class="hours-banner">
-  🕘 <strong>운영 안내:</strong> 본 서비스는 <strong>평일(공휴일 제외) 오전 9시 ~ 오후 6시</strong>에만 운영됩니다.
-  운영시간 외에는 접속이 되지 않을 수 있습니다.
 </div>
 <!-- ═══ 탭 네비게이션 ═══════════════════════════════════════════════ -->
 <nav class="tab-nav">
@@ -1385,46 +1307,5 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 </script>
-
-<script>
-(function() {
-  var overlay = document.getElementById('cold-start-overlay');
-  var bar     = document.getElementById('cold-bar');
-  var dots    = document.getElementById('cold-dots');
-  var pct = 0;
-
-  // 점 애니메이션
-  var dotTimer = setInterval(function() {
-    dots.textContent = dots.textContent.length >= 3 ? '.' : dots.textContent + '.';
-  }, 500);
-
-  // 프로그레스바 서서히 채우기 (30초 기준)
-  var barTimer = setInterval(function() {
-    if (pct < 90) { pct += 1; bar.style.width = pct + '%'; }
-  }, 300);
-
-  // /health 엔드포인트 폴링 — 응답 오면 로딩 화면 제거
-  function checkReady() {
-    fetch('/health')
-      .then(function(r) {
-        if (r.ok) {
-          clearInterval(dotTimer);
-          clearInterval(barTimer);
-          bar.style.width = '100%';
-          setTimeout(function() {
-            overlay.style.opacity = '0';
-            overlay.style.transition = 'opacity 0.5s ease';
-            setTimeout(function() { overlay.style.display = 'none'; }, 500);
-          }, 400);
-        } else { setTimeout(checkReady, 2000); }
-      })
-      .catch(function() { setTimeout(checkReady, 2000); });
-  }
-
-  // 1초 후 시작
-  setTimeout(checkReady, 1000);
-})();
-</script>
-
 </body>
 </html>
