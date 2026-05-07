@@ -4,10 +4,8 @@
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 from validators.engine import validate
-from api.vworld import (
-    search_candidates_with_fallback,
-    geocode_single_with_fallback,
-)
+from api.kakao import search_candidates as kakao_search_candidates
+from api.vworld import geocode_single_with_fallback
 from api.building_hub import (
     get_title_info_safe as get_title_info,
     get_recap_title_info_safe as get_recap_title_info,
@@ -36,7 +34,7 @@ def search_candidates_api():
     query = data.get("query", "").strip()
     if not query:
         return jsonify({"error": "검색어를 입력해주세요."}), 400
-    result = search_candidates_with_fallback(query)
+    result = kakao_search_candidates(query)
     return jsonify(result)
 
 
@@ -64,9 +62,15 @@ def land_info_api():
             data.get("platGbCd", "0"),
             data["bun"], data["ji"]
         )
-        return jsonify(get_land_info(pnu))
+        result = get_land_info(pnu)
+        # 해외 서버에서 VWorld 차단 시 수동입력 안내
+        if "error" in result:
+            result["manualInputRequired"] = True
+            result["manualInputHint"] = "토지대장 자동조회 불가 — 아래에 직접 입력하세요."
+        return jsonify(result)
     except KeyError as e:
-        return jsonify({"error": f"필수 파라미터 누락: {e}"}), 400
+        return jsonify({"error": f"필수 파라미터 누락: {e}",
+                        "manualInputRequired": True}), 400
 
 
 @app.route("/api/building-title", methods=["POST"])
@@ -162,6 +166,12 @@ def test_keys_api():
             "status": {"valid": not vworld_dummy(), "message": "키 설정됨" if not vworld_dummy() else "API 키 미설정"}
         },
     })
+
+
+# ─── 헬스체크 (Render 슬립 방지 모니터링용) ──────────────────────────────
+@app.route("/health", methods=["GET"])
+def health_check():
+    return jsonify({"status": "ok"}), 200
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

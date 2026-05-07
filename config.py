@@ -6,6 +6,8 @@ load_dotenv()
 # ─── API Keys (.env 파일에 입력하세요) ────────────────────────────────────────
 BUILDING_HUB_KEY = os.getenv("BUILDING_HUB_KEY", "YOUR_BUILDING_HUB_KEY")
 VWORLD_KEY       = os.getenv("VWORLD_KEY",       "YOUR_VWORLD_KEY")
+# 카카오 REST API 키 (주소 검색용 — 해외서버에서도 작동)
+KAKAO_REST_KEY   = os.getenv("KAKAO_REST_KEY",   "YOUR_KAKAO_REST_KEY")
 # VWorld NED API 도메인 — 발급 시 등록한 도메인 (로컬: localhost)
 VWORLD_DOMAIN    = os.getenv("VWORLD_DOMAIN",    "localhost")
 
