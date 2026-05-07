@@ -65,11 +65,7 @@ def _try_once(pnu: str, domain: str) -> dict:
         "pageNo":    1,
     }
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept": "application/xml, text/xml, */*",
-        }
-        resp = requests.get(VWORLD_LAND_URL, params=params, headers=headers, timeout=15)
+        resp = requests.get(VWORLD_LAND_URL, params=params, timeout=8)
         resp.raise_for_status()
 
         root = ET.fromstring(resp.text)

@@ -24,7 +24,7 @@ def _call(op_name: str, params: dict) -> dict:
         "pageNo":     params.get("pageNo", 1),
     }
     try:
-        resp = requests.get(url, params=full_params, timeout=20)
+        resp = requests.get(url, params=full_params, timeout=10)
         resp.raise_for_status()
 
         # 간혹 XML 에러 페이지가 오는 경우 처리
@@ -55,7 +55,7 @@ def _call(op_name: str, params: dict) -> dict:
     except requests.exceptions.Timeout:
         return {"error": "건축HUB API 응답 시간 초과 (10초)"}
     except requests.exceptions.RequestException as e:
-        return {"error": "API 서버 연결 실패. 잠시 후 다시 시도하세요."}
+        return {"error": f"네트워크 오류: {str(e)}"}
     except ValueError:
         return {"error": f"JSON 파싱 실패. 응답: {resp.text[:300]}"}
     except Exception as e:

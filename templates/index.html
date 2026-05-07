@@ -729,78 +729,9 @@ select { cursor: pointer; }
   min-width: 60px;
   display: inline-block;
 }
-
-
-.manual-land-box {
-  background: var(--amber-bg);
-  border: 1px solid #fde68a;
-  border-radius: var(--radius-sm);
-  padding: 12px 14px;
-  margin-top: 10px;
-}
-
-
-.hours-banner {
-  background: #eff6ff;
-  border-bottom: 1px solid #bfdbfe;
-  color: #1e40af;
-  font-size: .75rem;
-  padding: 6px 24px;
-  text-align: center;
-}
-
-
-#cold-start-overlay {
-  position: fixed; inset: 0; z-index: 9999;
-  background: linear-gradient(135deg, #1a2a4a 0%, #243555 100%);
-  display: flex; align-items: center; justify-content: center;
-}
-.cold-start-box {
-  text-align: center; color: #fff; padding: 40px;
-}
-.cold-spinner {
-  width: 56px; height: 56px;
-  border: 4px solid rgba(255,255,255,.15);
-  border-top-color: #60a5fa;
-  border-radius: 50%;
-  animation: spin 0.9s linear infinite;
-  margin: 0 auto 24px;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-.cold-title {
-  font-size: 1.3rem; font-weight: 700;
-  color: #fff; margin-bottom: 8px;
-  font-family: 'Noto Sans KR', sans-serif;
-}
-.cold-sub {
-  font-size: .9rem; color: #93c5fd; margin-bottom: 20px;
-}
-.cold-bar-wrap {
-  width: 240px; height: 4px;
-  background: rgba(255,255,255,.15);
-  border-radius: 20px; margin: 0 auto 16px; overflow: hidden;
-}
-.cold-bar {
-  height: 100%; width: 0%;
-  background: linear-gradient(90deg, #3b82f6, #60a5fa);
-  border-radius: 20px;
-  transition: width 0.5s ease;
-}
-.cold-notice {
-  font-size: .72rem; color: rgba(255,255,255,.4);
-}
 </style>
 </head>
 <body>
-    <div class="cold-title">서버 준비 중입니다</div>
-    <div class="cold-sub">잠시 후 자동으로 연결됩니다 <span id="cold-dots">.</span></div>
-    <div class="cold-bar-wrap">
-      <div class="cold-bar" id="cold-bar"></div>
-    </div>
-    <div class="cold-notice">첫 접속 시 최대 30초 소요될 수 있습니다</div>
-  </div>
-</div>
-
 
 <!-- ═══ 헤더 ═══════════════════════════════════════════════════════ -->
 <header class="app-header">
@@ -1376,7 +1307,5 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 </script>
-
-
 </body>
 </html>
