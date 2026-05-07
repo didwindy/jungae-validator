@@ -119,8 +119,34 @@ async function onFetchLand() {
   });
 
   if (data.error) {
-    document.getElementById("t1-land-result").innerHTML = `<div class="error-box">❌ ${data.error}</div>`;
-    showStatus("토지대장 조회 실패 — 건축물대장 조회는 계속 가능합니다.","error");
+    const manualHtml = data.manualInputRequired ? `
+      <div class="manual-land-box">
+        <p style="font-size:.78rem;color:var(--amber);margin-bottom:8px">
+          ⚠ 토지대장 자동조회 불가 (서버 위치 제한) — 직접 입력하세요.
+        </p>
+        <div style="display:flex;gap:10px;align-items:center">
+          <div>
+            <label style="font-size:.75rem;color:var(--gray-600)">토지면적 (㎡)</label>
+            <input type="number" id="t1-land-manual-area" placeholder="예) 330.5" step="0.01"
+              style="width:130px;padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:.875rem"
+              oninput="applyManualLand()">
+          </div>
+          <div>
+            <label style="font-size:.75rem;color:var(--gray-600)">지목</label>
+            <select id="t1-land-manual-jimok" onchange="applyManualLand()"
+              style="padding:7px 10px;border:1px solid var(--border);border-radius:4px;font-size:.875rem">
+              <option value="대">대</option>
+              <option value="전">전</option>
+              <option value="답">답</option>
+              <option value="임야">임야</option>
+              <option value="도로">도로</option>
+              <option value="기타">기타</option>
+            </select>
+          </div>
+        </div>
+      </div>` : `<div class="error-box">❌ ${data.error}</div>`;
+    document.getElementById("t1-land-result").innerHTML = manualHtml;
+    showStatus("토지대장 자동조회 불가 — 직접 입력 후 건축물대장 조회를 계속하세요.","error");
     return;
   }
 
@@ -355,4 +381,13 @@ function clearResults() {
 }
 function goToTab2() {
   AppState.syncAutoValues(); switchTab("tab2"); renderTab2();
+}
+
+// ─── 토지대장 수동입력 반영 ────────────────────────────────────────────────
+function applyManualLand() {
+  const area  = parseFloat(document.getElementById("t1-land-manual-area")?.value) || null;
+  const jimok = document.getElementById("t1-land-manual-jimok")?.value || "대";
+  AppState.address.landArea  = area;
+  AppState.address.landJimok = jimok;
+  if (area) showStatus(`✓ 토지면적 ${area}㎡ (${jimok}) 입력됨 — 건축물대장 조회를 계속하세요.`, "success");
 }

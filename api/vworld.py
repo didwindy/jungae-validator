@@ -31,7 +31,12 @@ def search_candidates(query: str, size: int = 10) -> dict:
         "errorformat": "json",
     }
     try:
-        resp = requests.get(VWORLD_SEARCH, params=params, timeout=8)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Referer": f"https://{VWORLD_KEY[:8]}.vworld.kr",
+            "Accept": "application/json",
+        }
+        resp = requests.get(VWORLD_SEARCH, params=params, headers=headers, timeout=15)
         resp.raise_for_status()
         data = resp.json()
 
@@ -71,9 +76,13 @@ def search_candidates(query: str, size: int = 10) -> dict:
         return {"candidates": candidates}
 
     except requests.exceptions.Timeout:
-        return {"error": "VWorld 검색 API 응답 시간 초과"}
+        return {"error": "VWorld 검색 API 응답 시간 초과 (15초). 잠시 후 다시 시도하세요."}
     except Exception as e:
-        return {"error": f"후보 검색 오류: {str(e)}"}
+        msg = str(e)
+        # API 키 노출 방지: URL 파라미터 제거
+        msg = re.sub(r'key=[A-Za-z0-9\-]+', 'key=***', msg)
+        msg = re.sub(r'https?://[^\s]+', '[API URL 숨김]', msg)
+        return {"error": f"주소 검색 오류: {msg}"}
 
 
 def geocode_single(full_address: str) -> dict:
@@ -91,7 +100,11 @@ def geocode_single(full_address: str) -> dict:
         "crs":         "EPSG:4326",
     }
     try:
-        resp = requests.get(VWORLD_GEOCODER, params=params, timeout=8)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json",
+        }
+        resp = requests.get(VWORLD_GEOCODER, params=params, headers=headers, timeout=15)
         resp.raise_for_status()
         data = resp.json()
 

@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: 중개광고검증
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    plan: free
+    envVars:
+      - key: BUILDING_HUB_KEY
+        sync: false        # Render 대시보드에서 직접 입력
+      - key: VWORLD_KEY
+        sync: false
+      - key: VWORLD_DOMAIN
+        value: your-render-app.onrender.com   # 배포 후 실제 도메인으로 수정
