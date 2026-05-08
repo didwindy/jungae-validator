@@ -58,6 +58,10 @@ function renderTab2() {
   // 자동 입력 항목 표시
   setVal("t2-address-display", d.소재지 || "");
   setVal("t2-area", d.면적 ?? "");
+
+  // 건물 유형에 따라 면적 필드 스타일 및 면적 근거 설정
+  _updateAreaFieldByType(d);
+
   setVal("t2-purps", d.중개대상물종류 || "");
   setVal("t2-total-floors-grnd", d.총층수_지상 ?? "");
   setVal("t2-total-floors-ugrd", d.총층수_지하 ?? "");
@@ -74,6 +78,28 @@ function renderTab2() {
 
   // 관리비 UI 갱신
   updateManageUI();
+}
+
+// ── 건물 유형별 면적 필드 스타일 및 면적 근거 설정 ─────────────────────────
+function _updateAreaFieldByType(d) {
+  const purps = d.중개대상물종류 || "";
+  const areaInput = document.getElementById("t2-area");
+  const areaSource = document.getElementById("t2-area-source");
+  if (!areaInput || !areaSource) return;
+
+  const isAptOft = ["아파트", "오피스텔"].some(p => purps.includes(p));
+  const isLand   = purps.includes("토지") || (!purps && AppState.address.landArea && !AppState.address.mainPurps);
+
+  if (isAptOft) {
+    areaInput.classList.add("auto-filled");
+    areaSource.value = "건축물대장(전유)";
+  } else if (isLand) {
+    areaInput.classList.remove("auto-filled");
+    areaSource.value = "토지대장";
+  } else {
+    areaInput.classList.remove("auto-filled");
+    areaSource.value = "건축물현황";
+  }
 }
 
 // ── 유형별 기본 표시방식 추론 ─────────────────────────────────────────────
@@ -132,6 +158,7 @@ function syncTab2ToState() {
 
   d.소재지_표시방식 = document.querySelector('input[name="address-method"]:checked')?.value || "";
   d.면적           = parseFloatSafe(getVal("t2-area"));
+  d.면적_근거      = document.getElementById("t2-area-source")?.value || d.면적_근거;
   d.중개대상물종류  = getVal("t2-purps");
   d.중개대상물종류_특수 = getVal("t2-purps-special");
   d.총층수_지상    = parseIntSafe(getVal("t2-total-floors-grnd"));
