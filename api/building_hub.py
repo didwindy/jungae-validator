@@ -202,7 +202,7 @@ def get_expos_info(sigungu_cd: str, bjdong_cd: str, bun: str, ji: str) -> dict:
         "bun":       bun.zfill(4),
         "ji":        ji.zfill(4),
     }
-    result = _call_all_pages("expos", params)
+    result = _call_all_pages("expos", params, per_page=1000)
     if "error" in result:
         return result
 
@@ -256,6 +256,7 @@ def get_exclusive_area_by_address(
     """
     getBrExposPubuseAreaInfo — 전유공용면적에서 '전유' 행만 합산
     exposPubuseGbCdNm 값: "전유" 또는 "공용" (전유만 합산)
+    dongNm/hoNm을 API 파라미터로 전달해 서버에서 필터링 → 대단지 성능 개선
     """
     params = {
         "sigunguCd": sigungu_cd,
@@ -263,6 +264,11 @@ def get_exclusive_area_by_address(
         "bun":       bun.zfill(4),
         "ji":        ji.zfill(4),
     }
+    if dong_nm:
+        params["dongNm"] = dong_nm
+    if ho_nm:
+        params["hoNm"] = ho_nm
+
     result = _call_all_pages("area", params)
     if "error" in result:
         return result
@@ -271,19 +277,18 @@ def get_exclusive_area_by_address(
     if not items:
         return {"error": "전유공용면적 정보가 없습니다."}
 
-    # 동/호 매칭 + "전유" 필터
-    # exposPubuseGbCdNm이 "전유"인 것만 합산 (공용 제외)
-    filtered = []
-    for i in items:
-        dong_match = (not dong_nm) or (i.get("dongNm", "") == dong_nm)
-        ho_match   = (not ho_nm)   or (i.get("hoNm", "")   == ho_nm)
-        is_jeonyu  = i.get("exposPubuseGbCdNm", "") == "전유"
-        if dong_match and ho_match and is_jeonyu:
-            filtered.append(i)
+    # "전유" 행만 합산 (공용 제외)
+    filtered = [i for i in items if i.get("exposPubuseGbCdNm", "") == "전유"]
 
-    if not filtered:
-        # 필터 결과 없으면 전체에서 전유만 (동명 불일치 가능성)
-        filtered = [i for i in items if i.get("exposPubuseGbCdNm", "") == "전유"]
+    # 서버 필터링 미지원 시 클라이언트 필터 폴백
+    if not filtered and (dong_nm or ho_nm):
+        filtered_fallback = []
+        for i in items:
+            dong_match = (not dong_nm) or (i.get("dongNm", "") == dong_nm)
+            ho_match   = (not ho_nm)   or (i.get("hoNm", "")   == ho_nm)
+            if dong_match and ho_match and i.get("exposPubuseGbCdNm", "") == "전유":
+                filtered_fallback.append(i)
+        filtered = filtered_fallback or [i for i in items if i.get("exposPubuseGbCdNm", "") == "전유"]
 
     exclusive_area = sum(float(i.get("area") or 0) for i in filtered)
 

@@ -3,11 +3,21 @@
  * 흐름: 주소선택 → 토지대장 자동조회 → 건축물대장(수동) → 동선택→층수확정 → 호선택→전용면적
  */
 
-async function postApi(endpoint, body) {
-  const r = await fetch(endpoint, {
-    method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)
-  });
-  return r.json();
+async function postApi(endpoint, body, timeoutMs = 30000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const r = await fetch(endpoint, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(body), signal:ctrl.signal
+    });
+    return r.json();
+  } catch (e) {
+    if (e.name === "AbortError") return { error: "응답 시간 초과 — 잠시 후 다시 시도해주세요." };
+    return { error: e.message };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function showStatus(msg, type) {
@@ -296,7 +306,7 @@ async function onHoChange() {
   const data = await postApi("/api/exclusive-area", {
     sigunguCd:a.sigunguCd, bjdongCd:a.bjdongCd,
     bun:a.bun, ji:a.ji, dongNm:a.selectedDong, hoNm
-  });
+  }, 30000);
 
   showAreaLoading(false);
 
