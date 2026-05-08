@@ -89,9 +89,14 @@ function _updateAreaFieldByType(d) {
 
   const isAptOft = ["아파트", "오피스텔"].some(p => purps.includes(p));
   const isLand   = purps.includes("토지") || (!purps && AppState.address.landArea && !AppState.address.mainPurps);
+  const hasExclusiveArea = AppState.address.selectedExclusiveArea !== null;
 
   if (isAptOft) {
-    areaInput.classList.add("auto-filled");
+    if (hasExclusiveArea) {
+      areaInput.classList.add("auto-filled");
+    } else {
+      areaInput.classList.remove("auto-filled");
+    }
     areaSource.value = "건축물대장(전유)";
   } else if (isLand) {
     areaInput.classList.remove("auto-filled");
