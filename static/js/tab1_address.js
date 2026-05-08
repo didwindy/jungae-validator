@@ -166,9 +166,11 @@ async function onFetchBuilding() {
 
   if (data.error) {
     document.getElementById("t1-building-result").innerHTML=`<div class="error-box">❌ ${data.error}</div>`;
+    AppState.address.buildingFetchStatus = "notFound";
     setBldgProgress(0); return;
   }
 
+  AppState.address.buildingFetchStatus = data.isAggregate ? "aggregate" : "general";
   AppState.address.totalFloors  = data.totalFloors;
   AppState.address.underFloors  = data.underFloors;
   AppState.address.parkingTotal = data.parking;

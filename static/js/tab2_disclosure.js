@@ -55,12 +55,24 @@ function renderTab2() {
     d.소재지 = parts.join(" ");
   }
 
+  // 건축물대장 조회 결과에 따른 면적 자동 입력
+  const bldgStatus = a.buildingFetchStatus || "none";
+  if (bldgStatus === "aggregate" && a.selectedExclusiveArea !== null) {
+    d.면적 = a.selectedExclusiveArea;
+    d.면적_근거 = "건축물대장(전유)";
+  } else if (bldgStatus === "general") {
+    d.면적_근거 = "건축물현황";
+  } else if (bldgStatus === "notFound" && a.landArea !== null) {
+    d.면적 = a.landArea;
+    d.면적_근거 = "토지대장";
+  }
+
   // 자동 입력 항목 표시
   setVal("t2-address-display", d.소재지 || "");
   setVal("t2-area", d.면적 ?? "");
 
   // 건물 유형에 따라 면적 필드 스타일 및 면적 근거 설정
-  _updateAreaFieldByType(d);
+  _updateAreaFieldByType();
 
   setVal("t2-purps", d.중개대상물종류 || "");
   setVal("t2-total-floors-grnd", d.총층수_지상 ?? "");
@@ -80,30 +92,31 @@ function renderTab2() {
   updateManageUI();
 }
 
-// ── 건물 유형별 면적 필드 스타일 및 면적 근거 설정 ─────────────────────────
-function _updateAreaFieldByType(d) {
-  const purps = d.중개대상물종류 || "";
+// ── 건축물대장 조회 결과별 면적 필드 스타일 및 면적 근거 설정 ────────────────
+function _updateAreaFieldByType() {
+  const a = AppState.address;
+  const d = AppState.disclosure;
   const areaInput = document.getElementById("t2-area");
   const areaSource = document.getElementById("t2-area-source");
   if (!areaInput || !areaSource) return;
 
-  const isAptOft = ["아파트", "오피스텔"].some(p => purps.includes(p));
-  const isLand   = purps.includes("토지") || (!purps && AppState.address.landArea && !AppState.address.mainPurps);
-  const hasExclusiveArea = AppState.address.selectedExclusiveArea !== null;
+  const bldgStatus = a.buildingFetchStatus || "none";
 
-  if (isAptOft) {
-    if (hasExclusiveArea) {
-      areaInput.classList.add("auto-filled");
-    } else {
-      areaInput.classList.remove("auto-filled");
-    }
+  if (bldgStatus === "aggregate" && a.selectedExclusiveArea !== null) {
+    // 집합건물 + 전용면적 조회 완료 → 파란색 배경 자동입력
+    areaInput.classList.add("auto-filled");
     areaSource.value = "건축물대장(전유)";
-  } else if (isLand) {
+  } else if (bldgStatus === "general") {
+    // 일반건물 → 흰색 배경 직접입력
     areaInput.classList.remove("auto-filled");
+    areaSource.value = "건축물현황";
+  } else if (bldgStatus === "notFound" && a.landArea !== null) {
+    // 건축물대장 없음 → 토지대장 면적 파란색 배경 자동입력
+    areaInput.classList.add("auto-filled");
     areaSource.value = "토지대장";
   } else {
     areaInput.classList.remove("auto-filled");
-    areaSource.value = "건축물현황";
+    areaSource.value = d.면적_근거 || "건축물대장(전유)";
   }
 }
 

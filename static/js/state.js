@@ -31,6 +31,8 @@ const AppState = {
     selectedHo: "",
     selectedFlrNo: null,
     selectedExclusiveArea: null,
+
+    buildingFetchStatus: "none",  // "none" | "aggregate" | "general" | "notFound"
   },
 
   // ── 탭2: 12가지 명시사항 ─────────────────────────────────────────
@@ -105,7 +107,18 @@ AppState.syncAutoValues = function () {
   if (a.totalFloors  !== null) d.총층수_지상 = a.totalFloors;
   if (a.underFloors !== null && a.underFloors > 0) d.총층수_지하 = a.underFloors;
   if (a.parkingTotal !== null) d.주차대수_총    = a.parkingTotal;
-  if (a.selectedExclusiveArea !== null) d.면적 = a.selectedExclusiveArea;
+
+  // 건축물대장 조회 결과에 따른 면적 자동 채움
+  const bldgStatus = a.buildingFetchStatus || "none";
+  if (bldgStatus === "aggregate" && a.selectedExclusiveArea !== null) {
+    d.면적 = a.selectedExclusiveArea;
+    d.면적_근거 = "건축물대장(전유)";
+  } else if (bldgStatus === "general") {
+    d.면적_근거 = "건축물현황";
+  } else if (bldgStatus === "notFound" && a.landArea !== null) {
+    d.면적 = a.landArea;
+    d.면적_근거 = "토지대장";
+  }
 
   // 소재지 기본값 — 표시 방식은 사용자가 선택
   if (a.fullAddress) d.소재지 = a.fullAddress;
@@ -145,6 +158,7 @@ AppState.resetAddress = function () {
     isViolationBldg: false, isUnregistered: false,
     dongList: [], selectedDong: "", selectedHo: "",
     selectedFlrNo: null, selectedExclusiveArea: null,
+    buildingFetchStatus: "none",
   };
   this.address = blank;
 };
