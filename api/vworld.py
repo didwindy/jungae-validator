@@ -11,6 +11,9 @@ from config import VWORLD_KEY, VWORLD_DOMAIN
 VWORLD_SEARCH   = "https://api.vworld.kr/req/search"
 VWORLD_GEOCODER = "https://api.vworld.kr/req/address"
 
+_RETRY_STATUS = {502, 503, 504}
+_MAX_RETRIES  = 5
+
 
 def _vworld_headers() -> dict:
     """VWorld 도메인 인증용 Referer 헤더 — 등록된 서비스 URL과 일치해야 함."""
@@ -18,6 +21,25 @@ def _vworld_headers() -> dict:
     if not domain.startswith("http"):
         domain = f"http://{domain}"
     return {"Referer": domain + "/"}
+
+
+def _vworld_get(url: str, params: dict) -> requests.Response:
+    """지수 백오프(1→2→4→8→16초)로 재시도하는 GET 요청."""
+    headers = _vworld_headers()
+    last_exc = None
+    for attempt in range(_MAX_RETRIES):
+        try:
+            resp = requests.get(url, params=params, headers=headers, timeout=10)
+            if resp.status_code not in _RETRY_STATUS:
+                return resp
+        except requests.exceptions.ConnectionError as e:
+            last_exc = e
+            resp = None
+        if attempt < _MAX_RETRIES - 1:
+            time.sleep(2 ** attempt)  # 1, 2, 4, 8, 16초
+    if last_exc:
+        raise last_exc
+    return resp
 
 
 def search_candidates(query: str, size: int = 10) -> dict:
@@ -40,14 +62,7 @@ def search_candidates(query: str, size: int = 10) -> dict:
         "errorformat": "json",
     }
     try:
-        headers = _vworld_headers()
-        resp = None
-        for attempt in range(3):
-            resp = requests.get(VWORLD_SEARCH, params=params, headers=headers, timeout=8)
-            if resp.status_code != 502:
-                break
-            if attempt < 2:
-                time.sleep(1)
+        resp = _vworld_get(VWORLD_SEARCH, params)
         resp.raise_for_status()
         data = resp.json()
 
@@ -107,14 +122,7 @@ def geocode_single(full_address: str) -> dict:
         "crs":         "EPSG:4326",
     }
     try:
-        headers = _vworld_headers()
-        resp = None
-        for attempt in range(3):
-            resp = requests.get(VWORLD_GEOCODER, params=params, headers=headers, timeout=8)
-            if resp.status_code != 502:
-                break
-            if attempt < 2:
-                time.sleep(1)
+        resp = _vworld_get(VWORLD_GEOCODER, params)
         resp.raise_for_status()
         data = resp.json()
 
