@@ -23,4 +23,4 @@ BUILDING_HUB_OPS = {
 # ─── VWorld 엔드포인트 ────────────────────────────────────────────────────────
 VWORLD_GEOCODER  = "https://api.vworld.kr/req/address"
 VWORLD_SEARCH    = "https://api.vworld.kr/req/search"
-VWORLD_LAND_URL  = "http://api.vworld.kr/ned/data/ladfrlList"   # ← ladfrlList 고정
+VWORLD_LAND_URL  = "https://api.vworld.kr/ned/data/ladfrlList"
