@@ -19,8 +19,12 @@ def _vworld_headers() -> dict:
     """VWorld 도메인 인증용 Referer 헤더 — 등록된 서비스 URL과 일치해야 함."""
     domain = VWORLD_DOMAIN.rstrip("/")
     if not domain.startswith("http"):
-        domain = f"http://{domain}"
-    return {"Referer": domain + "/"}
+        domain = f"https://{domain}"
+    return {
+        "Referer":    domain + "/",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept":     "application/json",
+    }
 
 
 def _vworld_get(url: str, params: dict) -> requests.Response:
