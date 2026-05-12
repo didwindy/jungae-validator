@@ -1262,6 +1262,11 @@ select { cursor: pointer; }
 </div>
 
 <!-- ═══ JS 로드 ══════════════════════════════════════════════════ -->
+<script>
+/* VWorld 브라우저 직접 호출용 설정 (Flask 서버가 주입) */
+window.VWORLD_KEY    = {{ vworld_key | tojson }};
+window.VWORLD_DOMAIN = {{ vworld_domain | tojson }};
+</script>
 <script src="/static/js/state.js"></script>
 <script src="/static/js/law_modal.js"></script>
 <script src="/static/js/tab1_address.js"></script>

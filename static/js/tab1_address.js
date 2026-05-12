@@ -42,6 +42,71 @@ function showAreaLoading(show) {
   if (el) el.style.display = show ? "flex" : "none";
 }
 
+// ─── VWorld 브라우저 직접 호출 (클라우드 IP 차단 우회) ───────────────────
+
+function _parseIdToCodes(id) {
+  if (id.length === 19 && /^\d+$/.test(id))
+    return [id.slice(0,5), id.slice(5,10), id[10], id.slice(11,15), id.slice(15,19)];
+  return ["","","0","0000","0000"];
+}
+
+function _parseBunJi(s) {
+  let m = s.match(/(\d+)-(\d+)번지?/);
+  if (m) return [m[1].padStart(4,"0"), m[2].padStart(4,"0")];
+  m = s.match(/(\d+)번지?/);
+  if (m) return [m[1].padStart(4,"0"), "0000"];
+  return ["0000","0000"];
+}
+
+async function _vworldSearchDirect(query) {
+  const key = window.VWORLD_KEY;
+  if (!key) throw new Error("no-key");
+  const params = new URLSearchParams({
+    service:"search", request:"search", version:"2.0",
+    crs:"epsg:4326", size:10, page:1,
+    type:"address", category:"parcel",
+    query, key, format:"json", errorformat:"json"
+  });
+  const resp = await fetch(`https://api.vworld.kr/req/search?${params}`,
+    { headers:{ Accept:"application/json" } });
+  const data = await resp.json();
+  const status = data?.response?.status;
+  if (status === "NOT_FOUND") return { candidates:[], message:"검색 결과가 없습니다." };
+  if (status !== "OK") return { error: data?.response?.error?.text || "VWorld 오류" };
+  return {
+    candidates: (data.response.result?.items || []).map(item => {
+      const parcel = item.address?.parcel || "";
+      const [sg,bd,pgb,bun,ji] = _parseIdToCodes(item.id || "");
+      const [bun2,ji2] = sg ? [bun,ji] : _parseBunJi(parcel);
+      return {
+        text:parcel||item.title||"", sigunguCd:sg, bjdongCd:bd, platGbCd:pgb,
+        bun:sg?bun:bun2, ji:sg?ji:ji2, needGeocode:!sg
+      };
+    })
+  };
+}
+
+async function _vworldGeocodeDirect(address) {
+  const key = window.VWORLD_KEY;
+  if (!key) throw new Error("no-key");
+  const params = new URLSearchParams({
+    service:"address", request:"getCoord", type:"parcel",
+    address, key, format:"json", errorformat:"json", crs:"EPSG:4326"
+  });
+  const resp = await fetch(`https://api.vworld.kr/req/address?${params}`,
+    { headers:{ Accept:"application/json" } });
+  const data = await resp.json();
+  if (data?.response?.status !== "OK") return { error:"좌표 변환 실패" };
+  const res = data.response.result;
+  const text = res.text || address;
+  const lc4  = res.structure?.level4LC || "";
+  const sg = lc4.length >= 10 ? lc4.slice(0,5) : "";
+  const bd = lc4.length >= 10 ? lc4.slice(5)   : "";
+  const [bun,ji] = _parseBunJi((res.structure?.level5 || "") + "번지" || text);
+  const pgb = /산/.test(text.split(/\s+/).slice(0,3).join(" ")) ? "1" : "0";
+  return { fullAddress:text, sigunguCd:sg, bjdongCd:bd, platGbCd:pgb, bun, ji };
+}
+
 // ─── STEP 1: 후보 검색 ───────────────────────────────────────────────────
 async function onSearchCandidates() {
   const query = document.getElementById("t1-address-input").value.trim();
@@ -50,7 +115,12 @@ async function onSearchCandidates() {
   showStatus("주소 검색 중...","loading");
   AppState.resetAddress(); clearResults();
 
-  const data = await postApi("/api/search-candidates", {query});
+  let data;
+  try {
+    data = await _vworldSearchDirect(query);   // 브라우저 직접 호출 (WAF 우회)
+  } catch {
+    data = await postApi("/api/search-candidates", {query});  // CORS 실패 시 백엔드 fallback
+  }
   if (data.error) { showStatus("❌ "+data.error,"error"); return; }
 
   const candidates = data.candidates||[];
@@ -82,7 +152,12 @@ async function onSelectCandidate(candidate, btnEl) {
 
   let result = {...candidate};
   if (candidate.needGeocode) {
-    const geo = await postApi("/api/geocode-single", {address: candidate.text});
+    let geo;
+    try {
+      geo = await _vworldGeocodeDirect(candidate.text);   // 브라우저 직접 호출
+    } catch {
+      geo = await postApi("/api/geocode-single", {address: candidate.text});  // fallback
+    }
     if (geo.error) { showStatus("❌ 코드 추출 실패: "+geo.error,"error"); return; }
     result = {...result, ...geo};
   }

@@ -23,7 +23,11 @@ CORS(app)
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    from api.vworld import _is_dummy_mode
+    from config import VWORLD_KEY, VWORLD_DOMAIN
+    return render_template("index.html",
+        vworld_key="" if _is_dummy_mode() else VWORLD_KEY,
+        vworld_domain=VWORLD_DOMAIN)
 
 
 # ─── 탭1: 주소 후보 목록 ────────────────────────────────────────────────

@@ -11,8 +11,9 @@ from config import VWORLD_KEY, VWORLD_DOMAIN
 VWORLD_SEARCH   = "https://api.vworld.kr/req/search"
 VWORLD_GEOCODER = "https://api.vworld.kr/req/address"
 
-_RETRY_STATUS = {502, 503, 504}
-_MAX_RETRIES  = 5
+_RETRY_STATUS     = {502, 503, 504}
+_MAX_RETRIES      = 5
+_MAX_CONN_RETRIES = 3  # WAF silent-drop(RemoteDisconnected) 시 빠른 실패 한도
 
 
 def _vworld_headers() -> dict:
@@ -22,25 +23,36 @@ def _vworld_headers() -> dict:
         domain = f"https://{domain}"
     return {
         "Referer":    domain + "/",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "User-Agent": "python-requests/2.31.0",
         "Accept":     "application/json",
+        "Connection": "close",
     }
 
 
 def _vworld_get(url: str, params: dict) -> requests.Response:
-    """지수 백오프(1→2→4→8→16초)로 재시도하는 GET 요청."""
+    """재시도 GET: 5xx는 지수 백오프, WAF 연결 차단은 3회 후 빠른 실패."""
     headers = _vworld_headers()
     last_exc = None
+    conn_fail = 0
     for attempt in range(_MAX_RETRIES):
         try:
-            resp = requests.get(url, params=params, headers=headers, timeout=10)
+            resp = requests.get(url, params=params, headers=headers, timeout=15)
             if resp.status_code not in _RETRY_STATUS:
                 return resp
         except requests.exceptions.ConnectionError as e:
+            # RemoteDisconnected 등 WAF silent-drop: 짧은 재시도 후 포기
             last_exc = e
             resp = None
+            conn_fail += 1
+            if conn_fail >= _MAX_CONN_RETRIES:
+                raise ConnectionError(
+                    "VWorld 연결 차단: 서버 IP가 방화벽에 차단된 것으로 보입니다. "
+                    "잠시 후 다시 시도하거나 UptimeRobot 등으로 서버 슬립을 방지하세요."
+                ) from e
+            time.sleep(5)
+            continue
         if attempt < _MAX_RETRIES - 1:
-            time.sleep(2 ** attempt)  # 1, 2, 4, 8, 16초
+            time.sleep(2 ** attempt)  # 1, 2, 4, 8초
     if last_exc:
         raise last_exc
     return resp
